@@ -10,7 +10,7 @@ var populate_tabs = function (callback) {
 		for (var i = 0; i < windows.length; i++) {
 			if (windows[i].type == "normal") {
 				for (var j = 0; j < windows[i].tabs.length; j++) {
-					if (windows[i].tabs[j].url.match(/^chrome\:\/\//i) == null) {
+					if (windows[i].tabs[j].url.match(/^chrome/i) == null) {
 						tabs.push(windows[i].tabs[j]);
 					}
 				}
