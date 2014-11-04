@@ -12,16 +12,10 @@
 (in-package :tabbed)
 
 (defvar *db* (sqlite:connect "tabbed.db"))
-(defvar *tabs* nil)
 
 (defun init-db ()
   (sqlite:execute-non-query *db* "CREATE TABLE IF NOT EXISTS browsers (nid INTEGER PRIMARY KEY, id TEXT NOT NULL, type TEXT NOT NULL, name TEXT NOT NULL)")
   (sqlite:execute-non-query *db* "CREATE TABLE IF NOT EXISTS tabs (id INTEGER PRIMARY KEY, browser_id TEXT NOT NULL, title TEXT NOT NULL, url TEXT NOT NULL, favicon TEXT)"))
-
-;; Print the tabs.
-(defun print-tabs ()
-  (dolist (tab *tabs*)
-	(format t "~{~a:~10t~a~%~}~%" tab)))
 
 ;; Define the tab update handler.
 (define-easy-handler (update-tabs :uri "/update_tabs"
@@ -37,21 +31,29 @@
 								browser-id
 								(cdr (assoc :title tab))
 								(cdr (assoc :url tab))
-								(cdr (assoc :fav-icon-url tab)))
-	  (push (list :title (cdr (assoc :title tab))
-				  :url (cdr (assoc :url tab))
-				  :favicon (cdr (assoc :fav-icon-url tab)))
-			*tabs*))
-	(setq *tabs* (reverse *tabs*))
-	(print-tabs)
+								(cdr (assoc :fav-icon-url tab))))
   (format nil "~a~%" (raw-post-data :force-text t))))
+
+;; Tabs list handler.
+(define-easy-handler (list-tabs :uri "/list"
+								:default-request-type :get) ()
+  (let* ((tabs nil)
+		 (tab-hash (make-hash-table)))
+	(dolist (tab (sqlite:execute-to-list *db* "SELECT browser_id, title, url, favicon FROM tabs"))
+	  (setf tab-hash (make-hash-table))
+	  (setf (gethash 'browser_id tab-hash) (nth 0 tab))
+	  (setf (gethash 'title tab-hash) (nth 1 tab))
+	  (setf (gethash 'url tab-hash) (nth 2 tab))
+	  (setf (gethash 'favicon tab-hash) (nth 3 tab))
+	  (push tab-hash tabs))
+	(setq tabs (reverse tabs))
+	(encode-json-to-string tabs)))
 
 ;; Setup the error level.
 (setf *show-lisp-errors-p* t
 	  *show-lisp-backtraces-p* t)
 
-(init-db)
-
 ;; Start the Hunchentoot instance.
+(init-db)
 (start (make-instance 'easy-acceptor :port 8080))
 
