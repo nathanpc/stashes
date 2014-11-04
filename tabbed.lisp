@@ -17,6 +17,19 @@
   (sqlite:execute-non-query *db* "CREATE TABLE IF NOT EXISTS browsers (nid INTEGER PRIMARY KEY, id TEXT NOT NULL, type TEXT NOT NULL, name TEXT NOT NULL)")
   (sqlite:execute-non-query *db* "CREATE TABLE IF NOT EXISTS tabs (id INTEGER PRIMARY KEY, browser_id TEXT NOT NULL, title TEXT NOT NULL, url TEXT NOT NULL, favicon TEXT)"))
 
+(define-easy-handler (update-browser :uri "/update_browser"
+									 :default-request-type :post) ()
+  (let* ((json (decode-json-from-string (raw-post-data
+										 :force-text t)))
+		 (browser (cdr (assoc :browser json))))
+	(sqlite:execute-non-query *db* "DELETE FROM browsers WHERE id=?"
+							  (cdr (assoc :id browser)))
+	(sqlite:execute-non-query *db* "INSERT INTO browsers (nid, id, type, name) VALUES (NULL, ?, ?, ?)"
+							  (cdr (assoc :id browser))
+							  (cdr (assoc :type browser))
+							  (cdr (assoc :name browser)))
+	(format nil "Done.")))
+
 ;; Define the tab update handler.
 (define-easy-handler (update-tabs :uri "/update_tabs"
 								  :default-request-type :post) ()
