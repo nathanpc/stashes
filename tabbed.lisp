@@ -50,8 +50,17 @@
 ;; Tabs list handler.
 (define-easy-handler (list-tabs :uri "/list"
 								:default-request-type :get) ()
-  (let* ((tabs nil)
-		 (tab-hash (make-hash-table)))
+  (let* ((json (make-hash-table))
+		 (browsers nil)
+		 (tabs nil)
+		 (tab-hash (make-hash-table))
+		 (browser-hash (make-hash-table)))
+	(dolist (browser (sqlite:execute-to-list *db* "SELECT id, type, name FROM browsers"))
+	  (setf browser-hash (make-hash-table))
+	  (setf (gethash 'id browser-hash) (nth 0 browser))
+	  (setf (gethash 'type browser-hash) (nth 1 browser))
+	  (setf (gethash 'name browser-hash) (nth 2 browser))
+	  (push browser-hash browsers))
 	(dolist (tab (sqlite:execute-to-list *db* "SELECT browser_id, title, url, favicon FROM tabs"))
 	  (setf tab-hash (make-hash-table))
 	  (setf (gethash 'browser_id tab-hash) (nth 0 tab))
@@ -60,7 +69,9 @@
 	  (setf (gethash 'favicon tab-hash) (nth 3 tab))
 	  (push tab-hash tabs))
 	(setq tabs (reverse tabs))
-	(encode-json-to-string tabs)))
+	(setf (gethash 'browsers json) browsers)
+	(setf (gethash 'tabs json) tabs)
+	(encode-json-to-string json)))
 
 ;; Setup the error level.
 (setf *show-lisp-errors-p* t
@@ -68,5 +79,6 @@
 
 ;; Start the Hunchentoot instance.
 (init-db)
-(start (make-instance 'easy-acceptor :port 8080))
+(start (make-instance 'easy-acceptor :port 8080
+					  :document-root #p"static/"))
 
