@@ -21,70 +21,64 @@ var populate_tabs = function (callback) {
 	});
 };
 
-/*
+var send_tabs = function() {
+	chrome.storage.local.get(["server_url", "id", "name"], function (res) {
+		if (typeof res.server_url !== "undefined" && typeof res.id !== "undefined" && typeof res.name !== "undefined") {
+			populate_tabs(function (tabs) {
+				var req = new XMLHttpRequest();
+				req.onreadystatechange = function () {
+					if (req.readyState == XMLHttpRequest.DONE) {
+						if (req.status !== 200) {
+							console.error("Couldn't send the tabs.");
+						}
+					}
+				};
+
+				var data = {
+					"browser": {
+						"id": res.id,
+						"name": res.name,
+						"type": "Chrome"
+					},
+					"tabs": tabs
+				};
+
+				req.open("POST", res.server_url + "/update_tabs", true);
+				req.send(JSON.stringify(data));
+			});
+		} else {
+			console.error("Settings are not set!");
+		}
+	});
+};
 
 // Window events.
-chrome.windows.onCreated.addListener(function (createInfo) {
-	console.log("Window: onCreated");
-	populate_tabs(function (tabs) {
-		console.log(tabs);
-	});
-});
-
 chrome.windows.onRemoved.addListener(function (windowId) {
 	console.log("Window: onRemoved");
-	populate_tabs(function (tabs) {
-		console.log(tabs);
-	});
+	send_tabs();
 });
 
 // Tab events.
 chrome.tabs.onCreated.addListener(function (tab) {
 	console.log("Tab: onCreated");
-	populate_tabs(function (tabs) {
-		console.log(tabs);
-	});
+	send_tabs();
 });
 
-chrome.tabs.onAttached.addListener(function (tabId, props) {
-	console.log("Tab: onAttached");
-	populate_tabs(function (tabs) {
-		console.log(tabs);
-	});
-});
-
-chrome.tabs.onMoved.addListener(function (tabId, props) {
+/*chrome.tabs.onMoved.addListener(function (tabId, props) {
 	console.log("Tab: onMoved");
-	populate_tabs(function (tabs) {
-		console.log(tabs);
-	});
+	send_tabs();
 });
 
 chrome.tabs.onUpdated.addListener(function(tabId, props) {
-	console.log("Tab: onMoved");
-	populate_tabs(function (tabs) {
-		console.log(tabs);
-	});
-});
-
-chrome.tabs.onDetached.addListener(function(tabId, props) {
-	console.log("Tab: onMoved");
-	populate_tabs(function (tabs) {
-		console.log(tabs);
-	});
-});
+	console.log("Tab: onUpdated");
+	send_tabs();
+});*/
 
 chrome.tabs.onRemoved.addListener(function(tabId) {
-	console.log("Tab: onMoved");
-	populate_tabs(function (tabs) {
-		console.log(tabs);
-	});
+	console.log("Tab: onRemoved");
+	send_tabs();
 });
-
-*/
 
 // Init.
-populate_tabs(function (tabs) {
-	console.log(tabs);
-});
+send_tabs();
 
